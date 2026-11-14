@@ -1,0 +1,25 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '30 5 * * 1'   # Mondays: the starter's newest release still copies
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node-version: [22, 24]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: npm test
+      - name: A live copy of the starter's newest release
+        shell: bash
+        run: node index.mjs "$RUNNER_TEMP/live tool" && node -e "const p=require(process.argv[1]); if (p.name !== 'live-tool') process.exit(1)" "$RUNNER_TEMP/live tool/package.json"

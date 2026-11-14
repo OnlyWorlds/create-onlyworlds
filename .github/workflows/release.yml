@@ -1,0 +1,105 @@
+name: release
+
+# Publishes create-onlyworlds to npm when a version tag (v0.1.0) is pushed, through npm's trusted
+# publishing: GitHub proves this workflow's identity to npm (OIDC), so no npm token exists anywhere.
+# Set up once on npmjs.com, the package's settings, "Trusted Publisher": GitHub Actions, organization
+# OnlyWorlds, repository create-onlyworlds, workflow release.yml.
+#
+# Every gate runs first and a red one stops the publish. After the publish the job reads the registry
+# back: the version is live, and its tarball holds exactly what this commit packs. Once npm serves it,
+# a second job makes the tag a GitHub release, its body the version's CHANGELOG entry.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # No registry-url: with it, setup-node writes an .npmrc and a placeholder NODE_AUTH_TOKEN, and npm
+      # sends that instead of the OIDC exchange.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Trusted publishing needs npm 11.5.1 or later; Node 22 ships npm 10.
+      - run: npm install -g npm@^11.5.1
+
+      - name: The tag names the version package.json carries
+        run: |
+          v="$(node -p "require('./package.json').version")"
+          if [ "v$v" != "$GITHUB_REF_NAME" ]; then
+            echo "tag $GITHUB_REF_NAME, but package.json says $v"; exit 1
+          fi
+          echo "VERSION=$v" >> "$GITHUB_ENV"
+
+      - name: A major version is not released from here
+        run: |
+          published="$(npm view create-onlyworlds version 2> /dev/null || true)"
+          if [ -n "$published" ] && [ "${VERSION%%.*}" != "${published%%.*}" ]; then
+            echo "major $VERSION against npm's $published: a major asks Titus first"; exit 1
+          fi
+
+      - name: Not already on npm
+        run: |
+          if npm view "create-onlyworlds@$VERSION" version > /dev/null 2>&1; then
+            echo "$VERSION is already on npm"; exit 1
+          fi
+
+      - name: The changelog has this version's entry
+        run: |
+          if ! awk -v v="$VERSION" '$1=="##" && $2=="["v"]" {f=1} END {exit !f}' CHANGELOG.md; then
+            echo "CHANGELOG.md has no '## [$VERSION]' entry: write it, then tag"; exit 1
+          fi
+
+      - run: npm test
+      - name: A live copy of the starter, as a stranger's npm create makes it
+        run: node index.mjs "$RUNNER_TEMP/live" && test -f "$RUNNER_TEMP/live/package.json"
+
+      - run: npm publish --access public
+
+      - name: Read it back from the registry
+        run: |
+          for i in $(seq 1 40); do
+            if [ "$(npm view create-onlyworlds@$VERSION version 2> /dev/null)" = "$VERSION" ]; then break; fi
+            echo "not visible yet ($i)"; sleep 15
+          done
+          [ "$(npm view create-onlyworlds@$VERSION version)" = "$VERSION" ] || { echo "$VERSION never appeared"; exit 1; }
+          mkdir -p ../local ../remote
+          npm pack --pack-destination ../local > /dev/null
+          for i in $(seq 1 40); do
+            (cd ../remote && npm pack "create-onlyworlds@$VERSION" > /dev/null 2>&1) && break
+            echo "not fetchable yet ($i)"; sleep 15
+          done
+          ls ../remote/*.tgz > /dev/null || { echo "$VERSION never became fetchable"; exit 1; }
+          tar -xzf ../local/*.tgz -C ../local
+          tar -xzf ../remote/*.tgz -C ../remote
+          diff -r ../local/package ../remote/package
+          echo "npm serves $VERSION, identical to this commit's pack"
+
+  github-release:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: The tag becomes a GitHub release, its body this version's CHANGELOG entry
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          awk -v h="[$v]" '$1=="##" { if (f) exit; if ($2==h) { f=1; next } } f' CHANGELOG.md > notes.md
+          grep -q '[^[:space:]]' notes.md || { echo "CHANGELOG.md's '## [$v]' entry is empty"; exit 1; }
+          gh release create "$GITHUB_REF_NAME" --verify-tag --title "create-onlyworlds $v" --notes-file notes.md

@@ -1,0 +1,32 @@
+{
+  "name": "create-onlyworlds",
+  "version": "0.1.0",
+  "description": "npm create onlyworlds: a small page that reads an OnlyWorlds world, ready to build your tool on",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "create-onlyworlds": "index.mjs"
+  },
+  "files": [
+    "index.mjs",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "keywords": [
+    "onlyworlds",
+    "worldbuilding",
+    "create",
+    "starter"
+  ],
+  "homepage": "https://onlyworlds.github.io/docs/getting-started/first-hour",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OnlyWorlds/create-onlyworlds.git"
+  }
+}
