@@ -3,11 +3,13 @@
 Start a tool on an [OnlyWorlds](https://www.onlyworlds.com) world with one command:
 
 ```bash
-npm create onlyworlds my-tool
+npx github:OnlyWorlds/create-onlyworlds my-tool
 cd my-tool
 npm install
 npm run dev
 ```
+
+`create-onlyworlds` is not published on npm yet, so the command runs it from this repository. Until this note is gone, `npm create onlyworlds` does not run this code.
 
 Open http://localhost:5173. The page already reads a real world, Moppetopia, the public demo world, with no account. It lists the world's elements one type at a time and opens one element's fields and links. From there the first hour goes to your idea.
 
@@ -18,7 +20,7 @@ The folder holds the [World Starter](https://github.com/OnlyWorlds/event-starter
 `create-onlyworlds` copies the starter's files from GitHub and names the project after the folder. It never runs `npm install` for you and never asks for a key. Each file is checked against the hash the release gives it before anything is written. If the folder already holds anything, nothing happens.
 
 ```
-npm create onlyworlds [folder] -- --ref <tag>
+npx github:OnlyWorlds/create-onlyworlds [folder] --ref <tag>
 ```
 
 `folder` defaults to `onlyworlds-tool`. `--ref` copies an older release of the starter instead of the newest.

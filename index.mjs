@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// create-onlyworlds: `npm create onlyworlds my-tool` makes a working page that reads an OnlyWorlds world.
+// create-onlyworlds: one command makes a working page that reads an OnlyWorlds world. Until the package is
+// on npm it runs from the repository: `npx github:OnlyWorlds/create-onlyworlds my-tool`.
 //
 // It copies the World Starter (github.com/OnlyWorlds/event-starter) at its newest tagged release into a new
 // folder, names the project after the folder, and prints the next three commands. It holds no copy of the
@@ -15,7 +16,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 export const STARTER = 'OnlyWorlds/event-starter';
 const VERSION = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'package.json'), 'utf8')).version;
 const HEADERS = { 'User-Agent': `create-onlyworlds/${VERSION}`, Accept: 'application/vnd.github+json' };
-const USAGE = `Usage: npm create onlyworlds [folder] [-- --ref <tag>]
+const USAGE = `Usage: npx github:OnlyWorlds/create-onlyworlds [folder] [--ref <tag>]
 
 Makes <folder> (default: onlyworlds-tool) holding the World Starter, a small page that reads an
 OnlyWorlds world, at its newest release, or at <tag> with --ref.`;

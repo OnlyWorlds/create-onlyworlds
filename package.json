@@ -1,7 +1,7 @@
 {
   "name": "create-onlyworlds",
   "version": "0.1.0",
-  "description": "npm create onlyworlds: a small page that reads an OnlyWorlds world, ready to build your tool on",
+  "description": "One command makes a small page that reads an OnlyWorlds world, ready to build your tool on",
   "license": "MIT",
   "type": "module",
   "bin": {
