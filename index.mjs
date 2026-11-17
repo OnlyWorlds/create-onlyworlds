@@ -60,10 +60,22 @@ function parseArgs(argv) {
   return { folder: folder ?? 'onlyworlds-tool', ref };
 }
 
-async function getJson(fetchFn, url) {
-  const res = await fetchFn(url, { headers: HEADERS });
+/** The name of the environment variable that holds a GitHub token, or undefined: GITHUB_TOKEN first, then GH_TOKEN. */
+function tokenName(env) {
+  return ['GITHUB_TOKEN', 'GH_TOKEN'].find((n) => typeof env[n] === 'string' && env[n] !== '');
+}
+
+// A token goes to GitHub's API and nowhere else: the raw file host is never sent one.
+async function getJson(fetchFn, url, env) {
+  const name = tokenName(env);
+  const res = await fetchFn(url, { headers: name ? { ...HEADERS, Authorization: `Bearer ${env[name]}` } : HEADERS });
+  if (res.status === 401 && name) {
+    throw new CreateError(`GitHub refused the token in ${name} (401). Renew it, or unset ${name} to read without signing in.`);
+  }
   if (res.status === 403 || res.status === 429) {
-    throw new CreateError(`GitHub refused the request (${res.status}): its API allows 60 requests an hour without signing in. Try again later.`);
+    throw new CreateError(name
+      ? `GitHub refused the request (${res.status}), sent with the token in ${name}. Try again later.`
+      : `GitHub refused the request (${res.status}): its API allows 60 requests an hour without signing in. Try again later, or set GITHUB_TOKEN to a GitHub token.`);
   }
   if (!res.ok) throw new CreateError(`GitHub answered ${res.status} for ${url}`);
   return res.json();
@@ -71,15 +83,16 @@ async function getJson(fetchFn, url) {
 
 /**
  * Copy the starter into `folder`. Returns { dir, name, ref, files }. `fetchFn` is the global fetch unless a
- * test gives another; `log` prints progress.
+ * test gives another; `log` prints progress; `env` is where a GitHub token is looked for (GITHUB_TOKEN, then
+ * GH_TOKEN), sent to GitHub's API only.
  */
-export async function create({ folder, ref, fetchFn = globalThis.fetch, log = () => {} }) {
+export async function create({ folder, ref, fetchFn = globalThis.fetch, log = () => {}, env = process.env }) {
   const dir = resolve(folder);
   if (existsSync(dir) && readdirSync(dir).length > 0) throw new CreateError(`${dir} exists and is not empty`);
-  const tag = ref ?? (await getJson(fetchFn, `https://api.github.com/repos/${STARTER}/releases/latest`)).tag_name;
+  const tag = ref ?? (await getJson(fetchFn, `https://api.github.com/repos/${STARTER}/releases/latest`, env)).tag_name;
   if (typeof tag !== 'string' || tag === '') throw new CreateError('the starter has no release to copy');
   log(`Copying the World Starter ${tag} into ${dir}`);
-  const tree = await getJson(fetchFn, `https://api.github.com/repos/${STARTER}/git/trees/${encodeURIComponent(tag)}?recursive=1`);
+  const tree = await getJson(fetchFn, `https://api.github.com/repos/${STARTER}/git/trees/${encodeURIComponent(tag)}?recursive=1`, env);
   if (tree.truncated) throw new CreateError("GitHub cut the starter's file list short; nothing was written");
   const blobs = (tree.tree ?? []).filter((e) => e.type === 'blob' && e.mode !== '120000');
   if (blobs.length === 0) throw new CreateError(`the starter at ${tag} has no files`);

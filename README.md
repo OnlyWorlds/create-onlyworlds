@@ -25,7 +25,7 @@ npx github:OnlyWorlds/create-onlyworlds [folder] --ref <tag>
 
 `folder` defaults to `onlyworlds-tool`. `--ref` copies an older release of the starter instead of the newest.
 
-It needs Node.js 22.12 or newer, which is what the starter needs. It reads GitHub's API twice per run, and GitHub allows 60 such reads an hour without signing in.
+It needs Node.js 22.12 or newer, which is what the starter needs. It reads GitHub's API twice per run, and GitHub allows 60 such reads an hour without signing in, counted per network address (a shared office or a CI runner can already be over it). With a GitHub token in `GITHUB_TOKEN`, or else `GH_TOKEN`, the two reads are signed with it. The token goes to GitHub's API only, never to the host the files come from.
 
 ## Next
 

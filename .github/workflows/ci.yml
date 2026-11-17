@@ -22,4 +22,7 @@ jobs:
       - run: npm test
       - name: A live copy of the starter's newest release
         shell: bash
+        # Runners share addresses, and GitHub counts unsigned API reads per address: the run's own token signs them.
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: node index.mjs "$RUNNER_TEMP/live tool" && node -e "const p=require(process.argv[1]); if (p.name !== 'live-tool') process.exit(1)" "$RUNNER_TEMP/live tool/package.json"
