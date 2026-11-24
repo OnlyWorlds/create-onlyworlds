@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { existsSync, mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { create, CreateError, gitBlobSha, packageName, placeIn, STARTER } from '../index.mjs';
+import { create, CreateError, gitBlobSha, packageName, placeIn, shownPath, STARTER } from '../index.mjs';
 
 const FILES = {
   'package.json': '{\n  "name": "onlyworlds-event-starter",\n  "private": true,\n  "version": "0.2.0"\n}\n',
@@ -149,4 +149,14 @@ test('names and places', (t) => {
   assert.match(placeIn(scratch(t), 'a/b.txt'), /a[\\/]b\.txt$/);
   // git's own hash of "hello\n"
   assert.equal(gitBlobSha(Buffer.from('hello\n')), 'ce013625030ba8dba906f756967f9e9ca394464a');
+});
+
+test('the next-step cd line gives a path with a space between double quotes, as it is', () => {
+  assert.equal(shownPath('my-tool'), 'my-tool');
+  assert.equal(shownPath('..\\live\\no-space'), '..\\live\\no-space');
+  // A Windows path keeps single backslashes, so the printed line is the command to type.
+  assert.equal(shownPath('..\\live\\live tool'), '"..\\live\\live tool"');
+  assert.equal(shownPath('../live/live tool'), '"../live/live tool"');
+  // A path that itself holds a double quote is escaped as before.
+  assert.equal(shownPath('say "hi" there'), JSON.stringify('say "hi" there'));
 });

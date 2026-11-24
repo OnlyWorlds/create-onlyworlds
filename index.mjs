@@ -120,6 +120,14 @@ export async function create({ folder, ref, fetchFn = globalThis.fetch, log = ()
   return { dir, name, ref: tag, files: files.length };
 }
 
+/** A path as the next-step `cd` line prints it: as it is, between double quotes when it holds a space. */
+export function shownPath(path) {
+  if (!path.includes(' ')) return path;
+  // No escaping: JSON.stringify would double every Windows backslash. A path that holds a double quote
+  // is the one case that still needs it.
+  return path.includes('"') ? JSON.stringify(path) : `"${path}"`;
+}
+
 function rename(path, name, more) {
   if (!existsSync(path)) return;
   const text = readFileSync(path, 'utf8');
@@ -139,7 +147,7 @@ async function main() {
   try {
     const r = await create({ ...args, log: (line) => console.log(line) });
     const cd = relative(process.cwd(), r.dir) || '.';
-    console.log(`\n${r.files} files, the World Starter ${r.ref}, named ${r.name}.\n\nNext:\n  cd ${cd.includes(' ') ? JSON.stringify(cd) : cd}\n  npm install\n  npm run dev\n\nThe page reads Moppetopia, the public demo world, with no account. README.md says how to read your own.`);
+    console.log(`\n${r.files} files, the World Starter ${r.ref}, named ${r.name}.\n\nNext:\n  cd ${shownPath(cd)}\n  npm install\n  npm run dev\n\nThe page reads Moppetopia, the public demo world, with no account. README.md says how to read your own.`);
   } catch (e) {
     console.error(`create-onlyworlds: ${e instanceof CreateError ? e.message : e.stack ?? e}`);
     process.exit(1);
